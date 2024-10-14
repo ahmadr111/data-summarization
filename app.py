@@ -8,25 +8,37 @@ app = Flask(__name__)
 def Index():
     return render_template("index.html")
 
-@app.route("/Summarize",methods=["GET","POST"])
+
+@app.route("/Summarize", methods=["GET", "POST"])
 def Summarize():
-    if req.method== "POST":
+    if req.method == "POST":
         API_URL = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn"
-        headers = {"Authorization": f"Bearer api_cDqsshiYYdsPmHybqxvnlZYIctoHFwMovw"}
+        headers = {"Authorization": f"Bearer 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"}
 
-        data=req.form["data"]
-
-        maxL=int(req.form["maxL"])
-        minL=maxL//4
+        try:
+            data = req.form["data"]
+            maxL = int(req.form["maxL"])
+            minL = maxL // 4
+        except KeyError as e:
+            return "Error: Missing form field", 400
+        except ValueError as e:
+            return "Error: Invalid form data", 400
         def query(payload):
             response = requests.post(API_URL, headers=headers, json=payload)
             return response.json()
 
-        output = query({
-            "inputs":data,
-            "parameters":{"min_length":minL,"max_length":maxL},
-        })[0]
-        
-        return render_template("index.html",result=output["summary_text"])
+        try:
+            output = query({
+                "inputs": data,
+                "parameters": {"min_length": minL, "max_length": maxL},
+            })[0]
+            return render_template("index.html", result=output["summary_text"])
+        except requests.exceptions.RequestException as e:
+            return "Error: API request failed", 500
+        except Exception as e:
+            return "Error: Data processing failed - " + str(e), 500
     else:
         return render_template("index.html")
+    
+if __name__ == '__main__':
+    app.run(debug=True)  # Enable debug mode
